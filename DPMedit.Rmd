@@ -10,7 +10,7 @@ output:
     theme: default
     toc: false
     code_folding: hide
-    # css: style.css
+    css: style.css
     includes:
       # in_header: "/ARC_Logo.png"
   classoption: landscape
@@ -36,7 +36,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 <div style="margin-top: -1.5rem;"></div>
 
-## Disease Progression Model{.tabset .tabset-fade .tabset-pills}
+## Multi-State Analysis of Diabetes Progression{.tabset .tabset-fade .tabset-pills}
 ### Project
 
 Aims of this project was **to develop a disease progression model for diabetes**.
@@ -149,7 +149,30 @@ Finalstate %>%
   dplyr::rename(
     hashed_ID = ID_hash
   ) %>%
-  head()
+  head() %>%
+  gt::gt() %>%
+  gt::tab_header(
+    title = "Example Patient Final States"
+  ) %>%
+  gt::cols_label(
+    hashed_ID = "hashed_ID",
+    Final = "Final disease state"
+  ) %>%
+  gt::data_color(
+    columns = Final,
+    fn = function(x) {
+      dplyr::case_when(
+        x == "Normoglycemic" ~ "#dcfce7",
+        x == "Prediabetes" ~ "#fef3c7",
+        x == "Diabetes" ~ "#fee2e2",
+        TRUE ~ "#ffffff"
+      )
+    }
+  ) %>%
+  gt::tab_options(
+    table.font.size = "12px",
+    data_row.padding = gt::px(4)
+  )
 ```
 
 - **1 = normal** **2 = pre-diabetes** **3 = diabetes**
@@ -508,6 +531,12 @@ gt::gt(raf_effect_tbl) %>%
     align = "center",
     columns = c(`RAF_RS = 0.3`, `RAF_RS = 1.5`, `1.5 / 0.3 rate ratio`)
   ) %>%
+  gt::tab_options(
+    table.font.size = "11px",
+    data_row.padding = gt::px(3),
+    heading.padding = gt::px(2),
+    source_notes.font.size = "10px"
+  ) %>%
   gt::opt_row_striping() %>%
   gt::tab_source_note(
     source_note = "Off-diagonal entries from qmatrix.msm(); larger values indicate faster transitions between states."
@@ -556,6 +585,12 @@ gt::gt(race_effect_tbl) %>%
   gt::fmt_number(columns = c(AA, `Non-AA`), decimals = 3) %>%
   gt::fmt_number(columns = `Non-AA/AA rate ratio`, decimals = 2) %>%
   gt::cols_align(align = "center", columns = c(AA, `Non-AA`, `Non-AA/AA rate ratio`)) %>%
+  gt::tab_options(
+    table.font.size = "11px",
+    data_row.padding = gt::px(3),
+    heading.padding = gt::px(2),
+    source_notes.font.size = "10px"
+  ) %>%
   gt::opt_row_striping() %>%
   gt::tab_source_note(
     source_note = "Off-diagonal entries from qmatrix.msm(); larger values indicate faster transitions between states."
@@ -601,6 +636,12 @@ gt::gt(gender_effect_tbl) %>%
   gt::fmt_number(columns = c(Female, Male), decimals = 3) %>%
   gt::fmt_number(columns = `Male/Female rate ratio`, decimals = 2) %>%
   gt::cols_align(align = "center", columns = c(Female, Male, `Male/Female rate ratio`)) %>%
+  gt::tab_options(
+    table.font.size = "11px",
+    data_row.padding = gt::px(3),
+    heading.padding = gt::px(2),
+    source_notes.font.size = "10px"
+  ) %>%
   gt::opt_row_striping() %>%
   gt::tab_source_note(
     source_note = "Off-diagonal entries from qmatrix.msm(); larger values indicate faster transitions between states."
@@ -650,9 +691,28 @@ gt::gt(genderrace_effect_tbl) %>%
     align = "center",
     columns = c(`Female, AA`, `Male, non-AA`, `Male non-AA/Female AA rate ratio`)
   ) %>%
+  gt::tab_options(
+    table.font.size = "11px",
+    data_row.padding = gt::px(3),
+    heading.padding = gt::px(2),
+    source_notes.font.size = "10px"
+  ) %>%
   gt::opt_row_striping() %>%
   gt::tab_source_note(
     source_note = "Off-diagonal entries from qmatrix.msm(); larger values indicate faster transitions between states."
   )
 ```
 *The table compares the off-diagonal transition intensities for the two covariate profiles used in the model call. A ratio greater than 1 indicates faster transition rates in the Male, non-AA profile.*
+
+### Summary
+
+This study applied a continuous-time multi-state Markov model to longitudinal HbA1c data from 242 patients and 722 clinic visits in order to characterize transitions among normoglycemia, prediabetes, and diabetes over time.
+
+- The empirical transition analysis showed that most patients remained in their current state at the next visit, with particularly strong persistence in the diabetic state.
+- The fitted multi-state model provided transition intensities and transition probabilities while accounting for irregular visit timing, which is a key feature of these clinical data.
+- The one-year transition probability estimates suggested a substantial risk of progression from prediabetes to diabetes.
+- Higher RAF risk scores were associated with faster transition rates toward more severe disease states.
+- Sex- and race-specific models suggested heterogeneity in progression rates, with some covariate profiles showing faster movement toward diabetes than others.
+- The Sankey diagram and compact summary tables together provide an interpretable view of both observed patient flow and model-based covariate effects.
+
+Overall, the analysis supports the use of multi-state modeling as a practical framework for quantifying diabetes progression and evaluating how patient characteristics modify transition dynamics across disease states.
