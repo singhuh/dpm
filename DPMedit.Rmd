@@ -36,7 +36,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 <div style="margin-top: -1.5rem;"></div>
 
-## Multi-State Analysis of Diabetes Progression{.tabset .tabset-fade .tabset-pills}
+## <span style="font-size: 1.35rem; font-weight: 700; color: #007acc;">Multi-State Analysis of Diabetes Progression</span>{.tabset .tabset-fade .tabset-pills}
 ### Project
 
 Aims of this project was **to develop a disease progression model for diabetes**.
