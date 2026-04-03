@@ -158,8 +158,6 @@ Trans1
 
 #### one-step transitions: Sankey diagram
 ```{r 6s, warning= FALSE, message=FALSE}
-library(highcharter)
-
 sankey_links <- expand.grid(
   from_label = rownames(Trans1),
   to_label = colnames(Trans1),
@@ -179,10 +177,49 @@ sankey_links <- expand.grid(
       `To Normal` = "next_normal",
       `To Pre-diabetes` = "next_prediabetes",
       `To Diabetes` = "next_diabetes"
+    ),
+    source_rank = dplyr::case_when(
+      from == "current_normal" ~ 1L,
+      from == "current_prediabetes" ~ 2L,
+      from == "current_diabetes" ~ 3L
+    ),
+    target_rank = dplyr::case_when(
+      to == "next_normal" ~ 1L,
+      to == "next_prediabetes" ~ 2L,
+      to == "next_diabetes" ~ 3L
+    ),
+    link_group = dplyr::case_when(
+      to == "next_diabetes" ~ "to_diabetes",
+      TRUE ~ "other"
     )
   ) %>%
+  dplyr::group_by(from) %>%
+  dplyr::mutate(
+    pct_source = 100 * weight / sum(weight),
+    count_label = paste0(weight, " transitions"),
+    pct_label = paste0(round(pct_source, 1), "% of source state"),
+    label_pos = dplyr::case_when(
+      from == "current_normal" & to == "next_normal" ~ 0.88,
+      from == "current_prediabetes" & to == "next_normal" ~ 0.88,
+      from == "current_normal" & to == "next_prediabetes" ~ 0.90,
+      from == "current_diabetes" & to == "next_prediabetes" ~ 0.94,
+      target_rank < source_rank ~ 0.35,
+      target_rank > source_rank ~ 0.88,
+      TRUE ~ 0.88
+    ),
+    label_dy = dplyr::case_when(
+      from == "current_normal" & to == "next_normal" ~ 18,
+      from == "current_prediabetes" & to == "next_normal" ~ 26,
+      from == "current_normal" & to == "next_prediabetes" ~ -10,
+      from == "current_diabetes" & to == "next_prediabetes" ~ 12,
+      target_rank == 1L ~ -2,
+      target_rank == 2L ~ 10,
+      target_rank == 3L ~ 24
+    )
+  ) %>%
+  dplyr::ungroup() %>%
   dplyr::filter(weight > 0) %>%
-  dplyr::select(from, to, weight)
+  dplyr::select(from, to, weight, count_label, pct_label, label_pos, label_dy, link_group)
 
 sankey_nodes <- data.frame(
   id = c(
@@ -196,34 +233,127 @@ sankey_nodes <- data.frame(
   stringsAsFactors = FALSE
 )
 
-if (knitr::is_html_output()) {
-  highcharter::highchart() %>%
-    highcharter::hc_title(text = "Observed One-Step Patient Flow") %>%
-    highcharter::hc_subtitle(text = "Empirical transitions from the current visit state to the next visit state") %>%
-    highcharter::hc_add_series(
-      data = sankey_links,
-      nodes = sankey_nodes,
-      type = "sankey",
-      hcaes(from = from, to = to, weight = weight),
-      name = "Observed transitions"
+if (knitr::is_html_output() && requireNamespace("networkD3", quietly = TRUE)) {
+  sankey_links_d3 <- sankey_links %>%
+    dplyr::mutate(
+      source = match(from, sankey_nodes$id) - 1L,
+      target = match(to, sankey_nodes$id) - 1L,
+      value = weight
     ) %>%
-    highcharter::hc_tooltip(
-      pointFormat = "{point.fromNode.name} to {point.toNode.name}: <b>{point.weight}</b> transitions"
-    ) %>%
-    highcharter::hc_plotOptions(
-      series = list(
-        dataLabels = list(enabled = TRUE, format = "{point.name}")
+    dplyr::select(source, target, value, count_label, pct_label, link_group)
+
+  sankey_plot <- networkD3::sankeyNetwork(
+    Links = sankey_links_d3,
+    Nodes = sankey_nodes,
+    Source = "source",
+    Target = "target",
+    Value = "value",
+    NodeID = "name",
+    units = "patients",
+    fontSize = 14,
+    nodeWidth = 30,
+    sinksRight = TRUE
+  )
+
+  htmlwidgets::onRender(
+    sankey_plot,
+    '
+    function(el, x, data) {
+      setTimeout(function() {
+        var svg = d3.select(el).select("svg");
+        var links = svg.selectAll(".link");
+        var lookup = {};
+
+        links
+          .style("stroke", function(d) {
+            return d.target.name === "Next: Diabetes"
+              ? "rgba(220, 38, 38, 0.35)"
+              : d.target.name === "Next: Normal"
+                ? "rgba(34, 197, 94, 0.28)"
+                : "rgba(160, 160, 160, 0.45)";
+          })
+          .style("stroke-opacity", 1);
+
+        data.keys.forEach(function(key, idx) {
+          lookup[key] = {
+            pct: data.pcts[idx],
+            count: data.counts[idx],
+            pos: data.pos[idx],
+            dy: data.dy[idx]
+          };
+        });
+
+        links.each(function(d, i) {
+          var key = d.source.name + "|" + d.target.name;
+          var meta = lookup[key] || { pct: "", count: d.value };
+
+          d3.select(this).select("title").remove();
+          d3.select(this)
+            .append("title")
+            .text(
+              d.source.name + " -> " + d.target.name +
+              "\\nCount: " + meta.count +
+              "\\nShare of source: " + meta.pct
+            );
+        });
+
+        svg.selectAll(".link-label-layer").remove();
+
+        var labelLayer = svg.append("g")
+          .attr("class", "link-label-layer");
+
+        labelLayer.selectAll("text")
+          .data(links.data())
+          .enter()
+          .append("text")
+          .attr("x", function(d, i) {
+            var key = d.source.name + "|" + d.target.name;
+            var meta = lookup[key] || { pos: 0.5, dy: 0 };
+            var path = links.nodes()[i];
+            var point = path.getPointAtLength(path.getTotalLength() * meta.pos);
+            return point.x;
+          })
+          .attr("y", function(d, i) {
+            var key = d.source.name + "|" + d.target.name;
+            var meta = lookup[key] || { pos: 0.5, dy: 0 };
+            var path = links.nodes()[i];
+            var point = path.getPointAtLength(path.getTotalLength() * meta.pos);
+            return point.y + meta.dy;
+          })
+          .attr("text-anchor", "middle")
+          .attr("dy", "0.1em")
+          .style("font-size", "11px")
+          .style("font-weight", "600")
+          .style("fill", "#1f2937")
+          .style("paint-order", "stroke")
+          .style("stroke", "white")
+          .style("stroke-width", "3px")
+          .style("stroke-linejoin", "round")
+          .style("pointer-events", "none")
+          .text(function(d) {
+            var key = d.source.name + "|" + d.target.name;
+            return (lookup[key] || {}).pct || "";
+          });
+      }, 300);
+    }
+    ',
+    data = list(
+      keys = paste(
+        sankey_nodes$name[match(sankey_links$from, sankey_nodes$id)],
+        sankey_nodes$name[match(sankey_links$to, sankey_nodes$id)],
+        sep = "|"
       ),
-      sankey = list(
-        nodeWidth = 24,
-        curveFactor = 0.5
-      )
+      pcts = sankey_links$pct_label,
+      counts = sankey_links$weight,
+      pos = sankey_links$label_pos,
+      dy = sankey_links$label_dy
     )
+  )
 } else {
   knitr::kable(
-    sankey_links,
-    col.names = c("From", "To", "Observed transitions"),
-    caption = "Observed one-step transitions used in the Sankey diagram."
+    sankey_links %>% dplyr::select(from, to, weight, pct_label),
+    col.names = c("From", "To", "Observed transitions", "Percent of source state"),
+    caption = "Observed one-step transitions used in the Sankey diagram. Install the networkD3 package and render to HTML to view the interactive Sankey plot."
   )
 }
 ```
