@@ -120,8 +120,16 @@ dim(dpm)
 #### visits by patient
 ```{r 4, warning= FALSE, message=FALSE}
 DPM<-ddply(dpm, "ID_hash", summarise, Visits=length(ID))
-mean(DPM$Visits)
-sd(DPM$Visits)
+visits_summary <- data.frame(
+  Statistic = "Visits per patient",
+  Value = sprintf("%.2f +/- %.2f", mean(DPM$Visits), sd(DPM$Visits))
+)
+
+knitr::kable(
+  visits_summary,
+  col.names = c("Statistic", "Value"),
+  caption = "Summary of visit counts per patient."
+)
 ```
 
 - An average of 3 visits per patient
@@ -129,7 +137,19 @@ sd(DPM$Visits)
 #### max/worse state by patient
 ```{r 5, warning= FALSE, message=FALSE}
 Finalstate<-ddply(dpm, "ID_hash", summarise, Final=max(status))
-head(Finalstate)
+Finalstate %>%
+  dplyr::mutate(
+    Final = dplyr::recode(
+      as.character(Final),
+      `1` = "Normoglycemic",
+      `2` = "Prediabetes",
+      `3` = "Diabetes"
+    )
+  ) %>%
+  dplyr::rename(
+    hashed_ID = ID_hash
+  ) %>%
+  head()
 ```
 
 - **1 = normal** **2 = pre-diabetes** **3 = diabetes**
