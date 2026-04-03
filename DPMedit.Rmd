@@ -716,3 +716,24 @@ This study applied a continuous-time multi-state Markov model to longitudinal Hb
 - The Sankey diagram and compact summary tables together provide an interpretable view of both observed patient flow and model-based covariate effects.
 
 Overall, the analysis supports the use of multi-state modeling as a practical framework for quantifying diabetes progression and evaluating how patient characteristics modify transition dynamics across disease states.
+```{r share_buttons, echo=FALSE, results='asis'}
+share_url <- "https://singhuh.github.io/dpm/DPM"
+share_title <- "Multi-State Analysis of Type 2 Diabetes Progression"
+share_body <- paste("I wanted to share this report with you:", share_url)
+
+cat(sprintf(
+'<div class="share-panel">
+  <div class="share-title">Share This Report</div>
+  <div class="share-buttons">
+    <a class="share-btn share-linkedin" href="%s" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+    <a class="share-btn share-x" href="%s" target="_blank" rel="noopener noreferrer">X</a>
+    <a class="share-btn share-facebook" href="%s" target="_blank" rel="noopener noreferrer">Facebook</a>
+    <a class="share-btn share-gmail" href="%s" target="_blank" rel="noopener noreferrer">Gmail</a>
+  </div>
+</div>',
+  paste0("https://www.linkedin.com/sharing/share-offsite/?url=", utils::URLencode(share_url, reserved = TRUE)),
+  paste0("https://twitter.com/intent/tweet?text=", utils::URLencode(share_title, reserved = TRUE), "&url=", utils::URLencode(share_url, reserved = TRUE)),
+  paste0("https://www.facebook.com/sharer/sharer.php?u=", utils::URLencode(share_url, reserved = TRUE)),
+  paste0("https://mail.google.com/mail/?view=cm&fs=1&su=", utils::URLencode(share_title, reserved = TRUE), "&body=", utils::URLencode(share_body, reserved = TRUE))
+))
+```

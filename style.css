@@ -21,3 +21,125 @@
   color: #1d4ed8;
   border: 1px solid #93c5fd;
 }
+
+.share-panel {
+  margin: 2rem 0 0 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.share-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.share-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.share-btn {
+  display: inline-block;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.share-btn:hover,
+.share-btn:focus {
+  text-decoration: none;
+  opacity: 0.92;
+}
+
+.share-linkedin {
+  background: #e0f2fe;
+  color: #0a66c2;
+  border-color: #93c5fd;
+}
+
+.share-x {
+  background: #e5e7eb;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+.share-facebook {
+  background: #e0e7ff;
+  color: #1877f2;
+  border-color: #a5b4fc;
+}
+
+.share-gmail {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
+
+.share-panel {
+  margin: 2rem 0 0 0;
+  padding: 1rem 1.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.share-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.share-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.share-btn {
+  display: inline-block;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.share-btn:hover,
+.share-btn:focus {
+  text-decoration: none;
+  opacity: 0.92;
+}
+
+.share-linkedin {
+  background: #e0f2fe;
+  color: #0a66c2;
+  border-color: #93c5fd;
+}
+
+.share-x {
+  background: #e5e7eb;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+.share-facebook {
+  background: #e0e7ff;
+  color: #1877f2;
+  border-color: #a5b4fc;
+}
+
+.share-gmail {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
+}
