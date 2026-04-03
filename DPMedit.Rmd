@@ -1,0 +1,508 @@
+---
+title: "**Disease Progression Model in Diabetes**"
+author: "Umesh Singh"
+date: "2025-12-27"
+# output: html_document
+always_allow_html: true
+output:
+  html_document:
+    df_print: paged
+    theme: default
+    toc: false
+    code_folding: hide
+    # css: style.css
+    includes:
+      # in_header: "/ARC_Logo.png"
+  classoption: landscape
+    # mainfont: Arial
+  pdf_document: 
+    keep_tex: true
+    latex_engine: xelatex
+  # word_document: default
+  # github_document: default
+  fig_caption: yes
+  keep_md: yes
+---
+
+```{r setup, include=FALSE, warning= FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<div style="max-width: 960px; height: 420px; overflow: hidden; margin: 0 auto 0 auto; background: transparent;">
+  <video autoplay loop muted playsinline width="100%" style="width: 100%; height: 100%; object-fit: cover; object-position: center; transform: scale(1.0, 1.0); transform-origin: center center; border: 0; outline: none; box-shadow: none; background: transparent;">
+    <source src="dpm.mp4" type="video/mp4">
+  </video>
+</div>
+
+<div style="margin-top: -1.5rem;"></div>
+
+## Disease Progression Model{.tabset .tabset-fade .tabset-pills}
+### Project
+
+Aims of this project was **to develop a disease progression model for diabetes**.
+In this project, the different states are defined according to the glycosylated hemoglobin levels:
+- **State 1: Normoglycemia (HbA1c<5.7)** <br>
+- **State 2: Pre-Diabetes (HbA1c 5.7-6.4)** <br>
+- **States 3: Diabetes (HbA1c>6.4)** <br>
+
+The attending practitioner monitor the status of subjects with diabetes periodically over time. The patient comes to the clinic a random number of times and at random times. Relevant covariate information is recorded at every visit. During a clinic visit, the glycosylated hemoglobin (HbA1c) level is assessed. The status of the subject is determined by the HbA1c level.  <br>
+**Research Question**: <br>
+- Given a specific state of the patient at the current visit, what will be her/his state at the next visit (months, years) and  <br>
+- how will that state be influenced by her/his gender, race and Risk score.
+
+### Cohort Building{.tabset}
+#### Data {.tabset}
+```{r 1, warning= FALSE, message=FALSE}
+# detach("package:digest", unload = TRUE)
+# install.packages("digest")
+# packageVersion("digest")
+library(digest)
+library(readxl)
+library(dplyr)
+library(msm) # multistate modeling
+library(plyr) # extract info from data
+# options(repos="https://CRAN.R-project.org")
+# install.packages("openxlsx")
+# library(openxlsx)
+remove(dpm)
+dpm<-read_excel("E:\\ARC\\Projects\\Dis Prog Model\\dpm\\DPM1.xlsx")
+dpm$datevisit <- as.Date(dpm$datevisit, format = "%m/%d/%Y" )
+dpm$DOB <- as.Date(dpm$DOB, format = "%m/%d/%Y" )
+dpm$X <- as.Date('2025-12-27')
+dpm$LastVisit=(dpm$X-dpm$datevisit)
+
+# dpm$ID_hash <- sapply(dpm$ID, function(x) digest(x, algo = "sha256", key = salt))
+salt <- Sys.getenv("HASH_SALT")
+dpm$ID_hashed <- sapply(dpm$ID,  function(x) digest(paste0(x, salt), "sha256"))
+
+dpm$ID_hash <- substr(dpm$ID_hashed,
+                      nchar(dpm$ID_hashed) - 5,
+                      nchar(dpm$ID_hashed))
+
+dpm %>% select(-c(ID,DOB,ID_hashed)) %>% head()
+```
+The project is based on data from 242 unique patients with a total of 726 visits. Relevant data were accessed from the EHR of the high-risk patients for diabetic mellitus who are enrolld at the Center. Deidentified data was used in the following analysis.
+
+- Describing the Dataset
+  +  ID_hash = Patient ID (hashed)
+  +  age_years = age of the patient in years exact to the day of visit 
+  +  gender1 = gender (0 = female; 1= male )
+  +  status = state of diabetes (1= no diabetes; 2=prediabetes; 3=diabetes)
+  +  cumint = cumulative duration in months from the first visit. Set month = 0 on the day of first visit
+  +  int_mo = months after last visit at the center. 
+  +  visitnum = Visit number of the specific subject
+  +  datevisit= date of each visit
+  +  DOB = date of birth (not shown)
+  +  A1C = glycosylated hemoglobin level (marker of diabetes status)
+  +  race1 = race of the patient </small>
+
+- **critical feature** of the data:
+  +  1. A patient *visits at random times.*
+  +  2. A patient *visits random number of times.*
+  +  3. *Total length of time between visits* is also random.
+
+#### Research Question
+Let's assume: **The physician has a patient currently on a check-up visit.** <br>
+- The state for the patient now is **pre-diabetes**.  <br>
+- What are the chances s/he will have **diabetes**  <br>
+  + in a month? or  <br>
+  + a year?  <br>
+- How this probability is modulated by her/his **race and gender or risk score**.
+
+#### Data Dimensions
+```{r 2, warning= FALSE, message=FALSE}
+dim(dpm)
+```
+
+- Total of 722 observations and 14 variables
+
+### Exploratory Analysis{.tabset}
+#### visits by patient
+```{r 4, warning= FALSE, message=FALSE}
+DPM<-ddply(dpm, "ID_hash", summarise, Visits=length(ID))
+mean(DPM$Visits)
+sd(DPM$Visits)
+```
+
+- An average of 3 visits per patient
+
+#### max/worse state by patient
+```{r 5, warning= FALSE, message=FALSE}
+Finalstate<-ddply(dpm, "ID_hash", summarise, Final=max(status))
+head(Finalstate)
+```
+
+- **1 = normal** **2 = pre-diabetes** **3 = diabetes**
+
+#### max/worse state counts: 
+```{r 5a, warning= FALSE, message=FALSE}
+Finalstate<-ddply(dpm, "ID_hash", summarise, Final=max(status))
+table(Finalstate$Final)
+```
+
+- **12 subjects remained normoglycemic**, **37 subjects became / remained pre-diabetic from normoglycemic / prediabetic states**, **193 subjects had diabetes at one-point at least**
+
+### Empirical Analysis{.tabset}
+#### one-step transitions: counts
+```{r 6, warning= FALSE, message=FALSE}
+library(msm)
+Trans1<-statetable.msm(status, ID_hash, data=dpm)
+rownames(Trans1) <- c("From Normal", "From Pre-diabetes", "From Diabetes")
+colnames(Trans1) <-c("To Normal", "To Pre-diabetes", "To Diabetes")
+Trans1
+```
+
+- Does not accounts for predictors: Count one-step transitions ...What was the stage at the next visit <br>
+- The table shows the one-step transition counts for all the 242 patients in the dataset <br>
+- In all there were 484 transitions. The topleft to downright diagonal and middle column is dominant. <br>
+
+#### one-step transitions: Sankey diagram
+```{r 6s, warning= FALSE, message=FALSE}
+library(highcharter)
+
+sankey_links <- expand.grid(
+  from_label = rownames(Trans1),
+  to_label = colnames(Trans1),
+  KEEP.OUT.ATTRS = FALSE,
+  stringsAsFactors = FALSE
+) %>%
+  dplyr::mutate(
+    weight = as.vector(Trans1),
+    from = dplyr::recode(
+      from_label,
+      `From Normal` = "current_normal",
+      `From Pre-diabetes` = "current_prediabetes",
+      `From Diabetes` = "current_diabetes"
+    ),
+    to = dplyr::recode(
+      to_label,
+      `To Normal` = "next_normal",
+      `To Pre-diabetes` = "next_prediabetes",
+      `To Diabetes` = "next_diabetes"
+    )
+  ) %>%
+  dplyr::filter(weight > 0) %>%
+  dplyr::select(from, to, weight)
+
+sankey_nodes <- data.frame(
+  id = c(
+    "current_normal", "current_prediabetes", "current_diabetes",
+    "next_normal", "next_prediabetes", "next_diabetes"
+  ),
+  name = c(
+    "Current: Normal", "Current: Pre-diabetes", "Current: Diabetes",
+    "Next: Normal", "Next: Pre-diabetes", "Next: Diabetes"
+  ),
+  stringsAsFactors = FALSE
+)
+
+if (knitr::is_html_output()) {
+  highcharter::highchart() %>%
+    highcharter::hc_title(text = "Observed One-Step Patient Flow") %>%
+    highcharter::hc_subtitle(text = "Empirical transitions from the current visit state to the next visit state") %>%
+    highcharter::hc_add_series(
+      data = sankey_links,
+      nodes = sankey_nodes,
+      type = "sankey",
+      hcaes(from = from, to = to, weight = weight),
+      name = "Observed transitions"
+    ) %>%
+    highcharter::hc_tooltip(
+      pointFormat = "{point.fromNode.name} to {point.toNode.name}: <b>{point.weight}</b> transitions"
+    ) %>%
+    highcharter::hc_plotOptions(
+      series = list(
+        dataLabels = list(enabled = TRUE, format = "{point.name}")
+      ),
+      sankey = list(
+        nodeWidth = 24,
+        curveFactor = 0.5
+      )
+    )
+} else {
+  knitr::kable(
+    sankey_links,
+    col.names = c("From", "To", "Observed transitions"),
+    caption = "Observed one-step transitions used in the Sankey diagram."
+  )
+}
+```
+
+- The Sankey diagram visualizes observed patient flow from the current state to the next recorded state.
+- It is based on empirical one-step transition counts and does not account for predictors or time between visits.
+
+#### one-step transitions: percentages
+```{r 6a, warning= FALSE, message=FALSE}
+Trans2<-100*round(prop.table(Trans1,1),3)
+Trans2
+```
+- If the patient is in **Normoglycemic** State currently, the chances that s/he will remain **Normoglycemia** are *62%*.
+- If the patient is in **Pre-diabetic** State currently, the chances that s/he will remain **Pre-diabetic state** are *60%*.
+- If the patient is in **Diabetic** State currently, the chances that s/he will remain ""Diabetec** are *80.5%*.
+- **Note** Empirical analysis does not take into account **predictors** and **time**.
+
+### Model Building{.tabset}
+#### Fit a Markov process model {.tabset}
+##### Initial Generator for Iteration
+```{r 7, warning= FALSE, message=FALSE}
+Q <- rbind(c(0, 0.25, 0.5), c(0.166, 0, 0.5), c(0.16, 0.25, 0) )
+Q
+```
+*Initializing the Q matrix. The diagonals set at zero. R-program figures out the actual values.*
+
+##### Specifying initial values 
+```{r 8, warning= FALSE, message=FALSE}
+Q.crude<-crudeinits.msm(status~cumint, ID_hash, data = dpm, qmatrix = Q)
+Q.crude
+```
+
+- to start searching for maximum; no covariates are entertained at this time.
+- The analysis is purely based on data with state and duration (months) since last visit. The matrix provides rates of decay needed for estimating transition probability matrices.*
+
+##### Results: Estimates
+```{r 9a, warning= FALSE, message=FALSE}
+dpm.msm <- msm(status ~ cumint, subject = ID_hash, data= dpm, qmatrix = Q, deathexact = FALSE)
+dpm.msm
+```
+
+- *From the estimated intensities, we see that prediabetic patients (State 2) are 18 times as likely to progress to diabetes (transitions from State 2 to State 3, vs from State 2 to State 1).*
+
+#### Model
+```{r 9c, warning= FALSE, message=FALSE}
+# pmatrix.msm(dpm.msm, t=.1)
+pmatrix.msm(dpm.msm, t=1.0)
+```
+
+- **Producing the maximum likelihood estimate of the infinitesimal generator Q.**
+  + *Estimate one-step transition probability matrix for any given time. What is the conditional probability of becoming diabetic in one year's time given that the patient is currently in prediabetic state: 0.59*
+
+#### Add Covariates{.tabset} 
+##### Covariate: Risk Score **RAF_RS**
+```{r 9d, warning= FALSE, message=FALSE}
+tidy_qmatrix <- function(qmatrix_obj) {
+  q_estimate <- if (is.list(qmatrix_obj) && !is.null(qmatrix_obj$estimate)) {
+    qmatrix_obj$estimate
+  } else {
+    qmatrix_obj
+  }
+
+  as.data.frame(as.table(as.matrix(q_estimate)), responseName = "intensity") %>%
+    dplyr::rename(from_state_raw = Var1, to_state_raw = Var2) %>%
+    dplyr::mutate(
+      from_id = as.integer(from_state_raw),
+      to_id = as.integer(to_state_raw)
+    ) %>%
+    dplyr::filter(from_id != to_id) %>%
+    dplyr::mutate(
+      from_state = dplyr::recode(
+        as.character(from_state_raw),
+        `1` = "Normoglycemia",
+        `State 1` = "Normoglycemia",
+        `2` = "Pre-diabetes",
+        `State 2` = "Pre-diabetes",
+        `3` = "Diabetes",
+        `State 3` = "Diabetes",
+        .default = as.character(from_state_raw)
+      ),
+      to_state = dplyr::recode(
+        as.character(to_state_raw),
+        `1` = "Normoglycemia",
+        `State 1` = "Normoglycemia",
+        `2` = "Pre-diabetes",
+        `State 2` = "Pre-diabetes",
+        `3` = "Diabetes",
+        `State 3` = "Diabetes",
+        .default = as.character(to_state_raw)
+      ),
+      transition = paste(from_state, "->", to_state)
+    ) %>%
+    dplyr::select(from_id, to_id, transition, intensity)
+}
+
+dpmraf.msm<-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=~RAF_RS)
+
+low_risk_q <- qmatrix.msm(dpmraf.msm, covariates = list(RAF_RS = 0.3), ci = "none")
+high_risk_q <- qmatrix.msm(dpmraf.msm, covariates = list(RAF_RS = 1.5), ci = "none")
+
+raf_effect_tbl <- tidy_qmatrix(low_risk_q) %>%
+  dplyr::rename(`RAF_RS = 0.3` = intensity) %>%
+  dplyr::left_join(
+    tidy_qmatrix(high_risk_q) %>%
+      dplyr::rename(`RAF_RS = 1.5` = intensity),
+    by = c("from_id", "to_id", "transition")
+  ) %>%
+  dplyr::mutate(
+    `1.5 / 0.3 rate ratio` = `RAF_RS = 1.5` / `RAF_RS = 0.3`
+  ) %>%
+  dplyr::arrange(from_id, to_id) %>%
+  dplyr::select(transition, `RAF_RS = 0.3`, `RAF_RS = 1.5`, `1.5 / 0.3 rate ratio`)
+
+gt::gt(raf_effect_tbl) %>%
+  gt::tab_header(
+    title = "Effect of Risk Score on Transition Intensities",
+    subtitle = "RAF_RS = 0.3 versus RAF_RS = 1.5"
+  ) %>%
+  gt::cols_label(
+    transition = "Transition",
+    `RAF_RS = 0.3` = "RAF_RS = 0.3",
+    `RAF_RS = 1.5` = "RAF_RS = 1.5",
+    `1.5 / 0.3 rate ratio` = "1.5 / 0.3 HR"
+  ) %>%
+  gt::tab_spanner(
+    label = "Estimated intensity",
+    columns = c(`RAF_RS = 0.3`, `RAF_RS = 1.5`)
+  ) %>%
+  gt::fmt_number(columns = c(`RAF_RS = 0.3`, `RAF_RS = 1.5`), decimals = 3) %>%
+  gt::fmt_number(columns = `1.5 / 0.3 rate ratio`, decimals = 2) %>%
+  gt::cols_align(
+    align = "center",
+    columns = c(`RAF_RS = 0.3`, `RAF_RS = 1.5`, `1.5 / 0.3 rate ratio`)
+  ) %>%
+  gt::opt_row_striping() %>%
+  gt::tab_source_note(
+    source_note = "Off-diagonal entries from qmatrix.msm(); larger values indicate faster transitions between states."
+  )
+```
+
+- *The table summarizes the off-diagonal transition intensities at two illustrative RAF_RS values. A 1.5 / 0.3 HR greater than 1 indicates faster transition rates at the higher risk score.*
+
+##### Model with constrained covariate effects{.tabset}
+###### Effect of Race (baseline=AA;)
+```{r 9e, warning= FALSE, message=FALSE}
+#dpmrace.msm<-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=list("2-3"=~race1, "2-1"=~race1))
+dpmrace.msm<-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=~race1, constraint = list(race1=c(1,2,3,1,2,3)))
+
+aa_q <- qmatrix.msm(dpmrace.msm, covariates = list(race1=1), ci = "none")
+non_aa_q <- qmatrix.msm(dpmrace.msm, covariates = list(race1=0), ci = "none")
+
+race_effect_tbl <- tidy_qmatrix(aa_q) %>%
+  dplyr::rename(AA = intensity) %>%
+  dplyr::left_join(
+    tidy_qmatrix(non_aa_q) %>%
+      dplyr::rename(`Non-AA` = intensity),
+    by = c("from_id", "to_id", "transition")
+  ) %>%
+  dplyr::mutate(
+    `Non-AA/AA rate ratio` = `Non-AA` / AA
+  ) %>%
+  dplyr::arrange(from_id, to_id) %>%
+  dplyr::select(transition, AA, `Non-AA`, `Non-AA/AA rate ratio`)
+
+gt::gt(race_effect_tbl) %>%
+  gt::tab_header(
+    title = "Effect of Race on Transition Intensities",
+    subtitle = "AA (race1 = 1) versus non-AA (race1 = 0)"
+  ) %>%
+  gt::cols_label(
+    transition = "Transition",
+    AA = "AA",
+    `Non-AA` = "Non-AA",
+    `Non-AA/AA rate ratio` = "Non-AA/AA HR"
+  ) %>%
+  gt::tab_spanner(
+    label = "Estimated intensity",
+    columns = c(AA, `Non-AA`)
+  ) %>%
+  gt::fmt_number(columns = c(AA, `Non-AA`), decimals = 3) %>%
+  gt::fmt_number(columns = `Non-AA/AA rate ratio`, decimals = 2) %>%
+  gt::cols_align(align = "center", columns = c(AA, `Non-AA`, `Non-AA/AA rate ratio`)) %>%
+  gt::opt_row_striping() %>%
+  gt::tab_source_note(
+    source_note = "Off-diagonal entries from qmatrix.msm(); larger values indicate faster transitions between states."
+  )
+```
+*The table summarizes the off-diagonal transition intensities by race. A Non-AA/AA HR greater than 1 indicates faster transition rates in the non-AA group.*
+
+###### Effect of Gender (F vs. M)
+```{r 9f, warning= FALSE, message=FALSE}
+dpmgender.msm<-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=~gender1, constraint = list(gender1=c(1,2,3,1,2,3)))
+
+female_q <- qmatrix.msm(dpmgender.msm, covariates = list(gender1=0), ci = "none")
+male_q <- qmatrix.msm(dpmgender.msm, covariates = list(gender1=1), ci = "none")
+
+gender_effect_tbl <- tidy_qmatrix(female_q) %>%
+  dplyr::rename(Female = intensity) %>%
+  dplyr::left_join(
+    tidy_qmatrix(male_q) %>%
+      dplyr::rename(Male = intensity),
+    by = c("from_id", "to_id", "transition")
+  ) %>%
+  dplyr::mutate(
+    `Male/Female rate ratio` = Male / Female
+  ) %>%
+  dplyr::arrange(from_id, to_id) %>%
+  dplyr::select(transition, Female, Male, `Male/Female rate ratio`)
+
+gt::gt(gender_effect_tbl) %>%
+  gt::tab_header(
+    title = "Effect of Gender on Transition Intensities",
+    subtitle = "Female (gender1 = 0) versus Male (gender1 = 1)"
+  ) %>%
+  gt::cols_label(
+    transition = "Transition",
+    Female = "Female",
+    Male = "Male",
+    `Male/Female rate ratio` = "Male/Female HR"
+  ) %>%
+  gt::tab_spanner(
+    label = "Estimated intensity",
+    columns = c(Female, Male)
+  ) %>%
+  gt::fmt_number(columns = c(Female, Male), decimals = 3) %>%
+  gt::fmt_number(columns = `Male/Female rate ratio`, decimals = 2) %>%
+  gt::cols_align(align = "center", columns = c(Female, Male, `Male/Female rate ratio`)) %>%
+  gt::opt_row_striping() %>%
+  gt::tab_source_note(
+    source_note = "Off-diagonal entries from qmatrix.msm(); larger values indicate faster transitions between states."
+  )
+```
+*The table summarizes the off-diagonal transition intensities by sex. A Male/Female HR greater than 1 indicates faster transition rates among males.*
+
+###### Effect of Gender (F vs. M) & Race (baseline=AA)
+```{r 9g, warning= FALSE, message=FALSE}
+dpmgenderrace.msm <-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, 
+                        covariates=~gender1 + race1, constraint = list(gender1=c(1,2,3,1,2,3)))
+
+female_aa_q <- qmatrix.msm(dpmgenderrace.msm, covariates = list(gender1=0, race1=1), ci = "none")
+male_non_aa_q <- qmatrix.msm(dpmgenderrace.msm, covariates = list(gender1=1, race1=0), ci = "none")
+
+genderrace_effect_tbl <- tidy_qmatrix(female_aa_q) %>%
+  dplyr::rename(`Female, AA` = intensity) %>%
+  dplyr::left_join(
+    tidy_qmatrix(male_non_aa_q) %>%
+      dplyr::rename(`Male, non-AA` = intensity),
+    by = c("from_id", "to_id", "transition")
+  ) %>%
+  dplyr::mutate(
+    `Male non-AA/Female AA rate ratio` = `Male, non-AA` / `Female, AA`
+  ) %>%
+  dplyr::arrange(from_id, to_id) %>%
+  dplyr::select(transition, `Female, AA`, `Male, non-AA`, `Male non-AA/Female AA rate ratio`)
+
+gt::gt(genderrace_effect_tbl) %>%
+  gt::tab_header(
+    title = "Effect of Gender and Race on Transition Intensities",
+    subtitle = "Female, AA (gender1 = 0, race1 = 1) versus Male, non-AA (gender1 = 1, race1 = 0)"
+  ) %>%
+  gt::cols_label(
+    transition = "Transition",
+    `Female, AA` = "Female, AA",
+    `Male, non-AA` = "Male, non-AA",
+    `Male non-AA/Female AA rate ratio` = "Male non-AA/Female AA HR"
+  ) %>%
+  gt::tab_spanner(
+    label = "Estimated intensity",
+    columns = c(`Female, AA`, `Male, non-AA`)
+  ) %>%
+  gt::fmt_number(columns = c(`Female, AA`, `Male, non-AA`), decimals = 3) %>%
+  gt::fmt_number(columns = `Male non-AA/Female AA rate ratio`, decimals = 2) %>%
+  gt::cols_align(
+    align = "center",
+    columns = c(`Female, AA`, `Male, non-AA`, `Male non-AA/Female AA rate ratio`)
+  ) %>%
+  gt::opt_row_striping() %>%
+  gt::tab_source_note(
+    source_note = "Off-diagonal entries from qmatrix.msm(); larger values indicate faster transitions between states."
+  )
+```
+*The table compares the off-diagonal transition intensities for the two covariate profiles used in the model call. A ratio greater than 1 indicates faster transition rates in the Male, non-AA profile.*

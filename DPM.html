@@ -1734,7 +1734,7 @@ random number of times and at random times. Relevant covariate
 information is recorded at every visit. During a clinic visit, the
 glycosylated hemoglobin (HbA1c) level is assessed. The status of the
 subject is determined by the HbA1c level. <br> <strong>Research
-Question</strong>: - Given a specific state of the patient at the
+Question</strong>: <br> - Given a specific state of the patient at the
 current visit, what will be her/his state at the next visit (months,
 years) and <br> - how will that state be influenced by her/his gender,
 race and Risk score.</p>
@@ -1758,16 +1758,21 @@ remove(dpm)
 dpm&lt;-read_excel(&quot;E:\\ARC\\Projects\\Dis Prog Model\\dpm\\DPM1.xlsx&quot;)
 dpm$datevisit &lt;- as.Date(dpm$datevisit, format = &quot;%m/%d/%Y&quot; )
 dpm$DOB &lt;- as.Date(dpm$DOB, format = &quot;%m/%d/%Y&quot; )
-dpm$X &lt;- as.Date(Sys.Date())
+dpm$X &lt;- as.Date(&#39;2025-12-27&#39;)
 dpm$LastVisit=(dpm$X-dpm$datevisit)
 
 # dpm$ID_hash &lt;- sapply(dpm$ID, function(x) digest(x, algo = &quot;sha256&quot;, key = salt))
 salt &lt;- Sys.getenv(&quot;HASH_SALT&quot;)
-dpm$ID_hash &lt;- sapply(dpm$ID,  function(x) digest(paste0(x, salt), &quot;sha256&quot;))
-dpm %&gt;% select(-c(ID,DOB)) %&gt;% head()</code></pre>
+dpm$ID_hashed &lt;- sapply(dpm$ID,  function(x) digest(paste0(x, salt), &quot;sha256&quot;))
+
+dpm$ID_hash &lt;- substr(dpm$ID_hashed,
+                      nchar(dpm$ID_hashed) - 5,
+                      nchar(dpm$ID_hashed))
+
+dpm %&gt;% select(-c(ID,DOB,ID_hashed)) %&gt;% head()</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["datevisit"],"name":[1],"type":["date"],"align":["right"]},{"label":["visitnum"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["status"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["cumint"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["int"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["AGE"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["A1C"],"name":[7],"type":["dbl"],"align":["right"]},{"label":["BMI"],"name":[8],"type":["dbl"],"align":["right"]},{"label":["RAF_RS"],"name":[9],"type":["dbl"],"align":["right"]},{"label":["gender1"],"name":[10],"type":["dbl"],"align":["right"]},{"label":["race1"],"name":[11],"type":["dbl"],"align":["right"]},{"label":["X"],"name":[12],"type":["date"],"align":["right"]},{"label":["LastVisit"],"name":[13],"type":["drtn"],"align":["right"]},{"label":["ID_hash"],"name":[14],"type":["chr"],"align":["left"]}],"data":[{"1":"2017-11-15","2":"1","3":"2","4":"0.0000000","5":"0.0000000","6":"65.04658","7":"6.2","8":"34.8","9":"1.725","10":"0","11":"0","12":"2026-04-02","13":"3060 days","14":"b407ff7e5d3b4c9d4c2d172c550b8328b770d63f6a096e6ee3f42361b6a4713c"},{"1":"2018-05-14","2":"2","3":"2","4":"0.4931507","5":"0.4931507","6":"65.53973","7":"6.3","8":"35.5","9":"1.725","10":"0","11":"0","12":"2026-04-02","13":"2880 days","14":"b407ff7e5d3b4c9d4c2d172c550b8328b770d63f6a096e6ee3f42361b6a4713c"},{"1":"2017-12-04","2":"1","3":"3","4":"0.0000000","5":"0.0000000","6":"46.88493","7":"8.1","8":"25.0","9":"0.381","10":"0","11":"0","12":"2026-04-02","13":"3041 days","14":"88e786de01dc8435ee9d6bf30b5f9569011be2e12e3df878dd1975c6199e0ca5"},{"1":"2018-03-14","2":"2","3":"3","4":"0.2739726","5":"0.2739726","6":"47.15890","7":"7.4","8":"25.0","9":"0.381","10":"0","11":"0","12":"2026-04-02","13":"2941 days","14":"88e786de01dc8435ee9d6bf30b5f9569011be2e12e3df878dd1975c6199e0ca5"},{"1":"2018-01-22","2":"1","3":"2","4":"0.0000000","5":"0.0000000","6":"48.14521","7":"6.1","8":"36.7","9":"0.299","10":"1","11":"0","12":"2026-04-02","13":"2992 days","14":"273a7cdbf2b1c12719d5c765f31a2f87a3b2383c55aa7962c7917676ff586e2c"},{"1":"2018-07-16","2":"2","3":"3","4":"0.4794521","5":"0.4794521","6":"48.62466","7":"6.4","8":"36.8","9":"0.299","10":"1","11":"0","12":"2026-04-02","13":"2817 days","14":"273a7cdbf2b1c12719d5c765f31a2f87a3b2383c55aa7962c7917676ff586e2c"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["datevisit"],"name":[1],"type":["date"],"align":["right"]},{"label":["visitnum"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["status"],"name":[3],"type":["dbl"],"align":["right"]},{"label":["cumint"],"name":[4],"type":["dbl"],"align":["right"]},{"label":["int"],"name":[5],"type":["dbl"],"align":["right"]},{"label":["AGE"],"name":[6],"type":["dbl"],"align":["right"]},{"label":["A1C"],"name":[7],"type":["dbl"],"align":["right"]},{"label":["BMI"],"name":[8],"type":["dbl"],"align":["right"]},{"label":["RAF_RS"],"name":[9],"type":["dbl"],"align":["right"]},{"label":["gender1"],"name":[10],"type":["dbl"],"align":["right"]},{"label":["race1"],"name":[11],"type":["dbl"],"align":["right"]},{"label":["X"],"name":[12],"type":["date"],"align":["right"]},{"label":["LastVisit"],"name":[13],"type":["drtn"],"align":["right"]},{"label":["ID_hash"],"name":[14],"type":["chr"],"align":["left"]}],"data":[{"1":"2017-11-15","2":"1","3":"2","4":"0.0000000","5":"0.0000000","6":"65.04658","7":"6.2","8":"34.8","9":"1.725","10":"0","11":"0","12":"2025-12-27","13":"2964 days","14":"a4713c"},{"1":"2018-05-14","2":"2","3":"2","4":"0.4931507","5":"0.4931507","6":"65.53973","7":"6.3","8":"35.5","9":"1.725","10":"0","11":"0","12":"2025-12-27","13":"2784 days","14":"a4713c"},{"1":"2017-12-04","2":"1","3":"3","4":"0.0000000","5":"0.0000000","6":"46.88493","7":"8.1","8":"25.0","9":"0.381","10":"0","11":"0","12":"2025-12-27","13":"2945 days","14":"9e0ca5"},{"1":"2018-03-14","2":"2","3":"3","4":"0.2739726","5":"0.2739726","6":"47.15890","7":"7.4","8":"25.0","9":"0.381","10":"0","11":"0","12":"2025-12-27","13":"2845 days","14":"9e0ca5"},{"1":"2018-01-22","2":"1","3":"2","4":"0.0000000","5":"0.0000000","6":"48.14521","7":"6.1","8":"36.7","9":"0.299","10":"1","11":"0","12":"2025-12-27","13":"2896 days","14":"586e2c"},{"1":"2018-07-16","2":"2","3":"3","4":"0.4794521","5":"0.4794521","6":"48.62466","7":"6.4","8":"36.8","9":"0.299","10":"1","11":"0","12":"2025-12-27","13":"2721 days","14":"586e2c"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <p>The project is based on data from 242 unique patients with a total of
@@ -1816,9 +1821,9 @@ have <strong>diabetes</strong> <br> + in a month? or <br> + a year? <br>
 or risk score</strong>.</p>
 </div>
 <div id="data-dimensions" class="section level4">
-<h4>data dimensions</h4>
+<h4>Data Dimensions</h4>
 <pre class="r"><code>dim(dpm)</code></pre>
-<pre><code>## [1] 722  16</code></pre>
+<pre><code>## [1] 722  17</code></pre>
 <ul>
 <li>Total of 722 observations and 14 variables</li>
 </ul>
@@ -1843,7 +1848,7 @@ mean(DPM$Visits)</code></pre>
 head(Finalstate)</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["ID_hash"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Final"],"name":[2],"type":["dbl"],"align":["right"]}],"data":[{"1":"00557ae2acf27d6ebb9773345b620433a36a39f5aacae242437ff2c46574c2df","2":"3","_rn_":"1"},{"1":"00b7551121a50e97f4780d0d9a24880e03c4963eb90ccd1f1394a03ac92697b3","2":"3","_rn_":"2"},{"1":"047478b775de4741de707c93103a8672bc56760b2bde84f082544e028e44c7ee","2":"3","_rn_":"3"},{"1":"068f11b356f93ca2b64edc614634398ae1aba60d96a7a60a78e9f469d9f759d1","2":"3","_rn_":"4"},{"1":"086c8b5cf11886a4929d6faddca00fab8ad62a2214b8841ae11f06a2908e4bf0","2":"2","_rn_":"5"},{"1":"09c292c2e5d6e78bc4ebcb3d287d9a565f59e9da3b319cb06cee895a7ff97f40","2":"2","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":[""],"name":["_rn_"],"type":[""],"align":["left"]},{"label":["ID_hash"],"name":[1],"type":["chr"],"align":["left"]},{"label":["Final"],"name":[2],"type":["dbl"],"align":["right"]}],"data":[{"1":"0083a9","2":"3","_rn_":"1"},{"1":"00ccb9","2":"3","_rn_":"2"},{"1":"040238","2":"3","_rn_":"3"},{"1":"0551fe","2":"3","_rn_":"4"},{"1":"059e6e","2":"3","_rn_":"5"},{"1":"08bf40","2":"3","_rn_":"6"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 <ul>
@@ -1994,19 +1999,10 @@ year’s time given that the patient is currently in prediabetic state:
 </div>
 <div id="add-covariates" class="section level4 tabset">
 <h4 class="tabset">Add Covariates</h4>
-<div id="covariaterisk-score-raf_rs" class="section level5">
-<h5>Covariate=Risk Score <strong>RAF_RS</strong></h5>
+<div id="covariate-risk-score-raf_rs" class="section level5">
+<h5>Covariate: Risk Score <strong>RAF_RS</strong></h5>
 <pre class="r"><code>dpmraf.msm&lt;-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=~RAF_RS)
-qmatrix.msm(dpmraf.msm, covariates = list(RAF_RS=1.5))</code></pre>
-<pre><code>##         State 1                      State 2                     
-## State 1 -2.4892 (-8.193e+00,-0.7563)  1.6546 ( 4.045e-01, 6.7689)
-## State 2  0.0273 ( 2.814e-05,26.4908) -2.4351 (-4.316e+00,-1.3740)
-## State 3  0.3333 ( 9.956e-02, 1.1161)  1.0228 ( 5.562e-01, 1.8806)
-##         State 3                     
-## State 1  0.8345 ( 6.503e-02,10.7105)
-## State 2  2.4078 ( 1.352e+00, 4.2866)
-## State 3 -1.3561 (-2.311e+00,-0.7957)</code></pre>
-<pre class="r"><code>qmatrix.msm(dpmraf.msm, covariates = list(RAF_RS=.3))</code></pre>
+qmatrix.msm(dpmraf.msm, covariates = list(RAF_RS=.3))</code></pre>
 <pre><code>##         State 1                      State 2                     
 ## State 1 -1.62182 (-3.839620,-0.6850)  1.57863 ( 0.649827, 3.8350)
 ## State 2  0.20117 ( 0.024216, 1.6711) -2.16379 (-3.297495,-1.4199)
@@ -2015,16 +2011,25 @@ qmatrix.msm(dpmraf.msm, covariates = list(RAF_RS=1.5))</code></pre>
 ## State 1  0.04318 ( 0.001059, 1.7611)
 ## State 2  1.96262 ( 1.278915, 3.0118)
 ## State 3 -0.93382 (-1.373902,-0.6347)</code></pre>
+<pre class="r"><code>qmatrix.msm(dpmraf.msm, covariates = list(RAF_RS=1.5))</code></pre>
+<pre><code>##         State 1                      State 2                     
+## State 1 -2.4892 (-8.193e+00,-0.7563)  1.6546 ( 4.045e-01, 6.7689)
+## State 2  0.0273 ( 2.814e-05,26.4908) -2.4351 (-4.316e+00,-1.3740)
+## State 3  0.3333 ( 9.956e-02, 1.1161)  1.0228 ( 5.562e-01, 1.8806)
+##         State 3                     
+## State 1  0.8345 ( 6.503e-02,10.7105)
+## State 2  2.4078 ( 1.352e+00, 4.2866)
+## State 3 -1.3561 (-2.311e+00,-0.7957)</code></pre>
 <ul>
 <li><em>The hazard ratio for progressing from prediabetic state to a
-diabetic state is 1.2 times higher if the risk score increases from 0.3
-(top table) to 1.5 (bottom table)</em></li>
+diabetic state is (2.40/1.96) = 1.2 times higher if the risk score
+increases from 0.3 (top table) to 1.5 (bottom table)</em></li>
 </ul>
 </div>
 <div id="model-with-constrained-covariate-effects" class="section level5 tabset">
 <h5 class="tabset">Model with constrained covariate effects</h5>
 <div id="effect-of-race-baselineaa" class="section level6">
-<h6>Effect of <strong>Race</strong> (Baseline=AA;)</h6>
+<h6>Effect of Race (baseline=AA;)</h6>
 <pre class="r"><code>#dpmrace.msm&lt;-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=list(&quot;2-3&quot;=~race1, &quot;2-1&quot;=~race1))
 dpmrace.msm&lt;-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=~race1, constraint = list(race1=c(1,2,3,1,2,3)))
 qmatrix.msm(dpmrace.msm, covariates = list(race1=1))</code></pre>
@@ -2053,9 +2058,8 @@ rates have common covariate effects. </em> <br> <strong>AA seem to have
 similar risk of progressing from prediabetes to diabetes</strong> 2.13
 (top table for AA) vs. 2.15 (bottom table for non-AA)</p>
 </div>
-</div>
-<div id="effect-of-gender-baselinefemales" class="section level5">
-<h5>Effect of Gender (Baseline=Females;)</h5>
+<div id="effect-of-gender-f-vs.-m" class="section level6">
+<h6>Effect of Gender (F vs. M)</h6>
 <pre class="r"><code>dpmgender.msm&lt;-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=~gender1, constraint = list(gender1=c(1,2,3,1,2,3)))
 qmatrix.msm(dpmgender.msm, covariates = list(gender1=1))</code></pre>
 <pre><code>##         State 1                    State 2                   
@@ -2079,9 +2083,14 @@ qmatrix.msm(dpmgender.msm, covariates = list(gender1=1))</code></pre>
 pre-diabetic state<strong> </strong>2.3 (top table) vs 1.99 (bottom
 table)**</p>
 </div>
-<div id="effect-of-gender-baselinefemales-and-race-baselineaa" class="section level5">
-<h5>Effect of Gender (Baseline=Females;) and Race (Baseline=AA)</h5>
-<pre class="r"><code>dpmgenderrace.msm&lt;-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, covariates=~gender1 + race1, constraint = list(gender1=c(1,2,3,1,2,3)))
+<div id="effect-of-gender-f-vs.-m-race-baselineaa" class="section level6">
+<h6>Effect of Gender (F vs. M) &amp; Race (baseline=AA)</h6>
+<pre class="r"><code>library(dplyr)
+library(tidyr)
+library(gt)
+library(tidyverse)
+dpmgenderrace.msm &lt;-msm(status~cumint, subject=ID_hash, data=dpm, qmatrix=Q, deathexact = FALSE, 
+                        covariates=~gender1 + race1, constraint = list(gender1=c(1,2,3,1,2,3)))
 qmatrix.msm(dpmgenderrace.msm, covariates = list(gender1=0, race1=1))</code></pre>
 <pre><code>##         State 1                             
 ## State 1 -1.679e+00 ( -3.351e+00, -8.416e-01)
@@ -2106,6 +2115,7 @@ qmatrix.msm(dpmgenderrace.msm, covariates = list(gender1=0, race1=1))</code></pr
 ## State 3 -1.4492 (-2.71446,-0.7737)</code></pre>
 <p><strong>Comparison in the hazard ratio between female white and male
 AA : 1.86 (top table) vs. 2.49 (bottom table).</strong></p>
+</div>
 </div>
 </div>
 </div>
