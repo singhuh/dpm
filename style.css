@@ -121,6 +121,10 @@
   color: #334155;
 }
 
+.sankey-share-title {
+  margin-left: 0.6rem;
+}
+
 .sankey-download-btn {
   display: inline-flex;
   align-items: center;
@@ -144,6 +148,51 @@
   box-shadow: 0 6px 16px rgba(37, 99, 235, 0.15);
   outline: none;
   transform: translateY(-1px);
+}
+
+.sankey-share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+.sankey-share-btn:hover,
+.sankey-share-btn:focus {
+  opacity: 0.96;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.16);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.sankey-share-linkedin {
+  background: #e0f2fe;
+  color: #0a66c2;
+  border-color: #93c5fd;
+}
+
+.sankey-share-facebook {
+  background: #e0e7ff;
+  color: #1877f2;
+  border-color: #a5b4fc;
+}
+
+.sankey-share-whatsapp {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.sankey-share-gmail {
+  background: #fef2f2;
+  color: #b91c1c;
+  border-color: #fecaca;
 }
 
 .sankey-export-widget {
@@ -178,5 +227,14 @@
   .sankey-download-btn {
     min-width: 78px;
     padding: 0.5rem 0.75rem;
+  }
+
+  .sankey-share-title {
+    margin-left: 0;
+  }
+
+  .sankey-share-btn {
+    width: 40px;
+    height: 40px;
   }
 }
