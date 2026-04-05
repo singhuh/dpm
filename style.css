@@ -103,6 +103,53 @@
   border-color: #fecaca;
 }
 
+.sankey-export-panel {
+  margin: 0.5rem 0 1.25rem;
+}
+
+.sankey-export-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.85rem;
+}
+
+.sankey-export-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.sankey-download-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid #93c5fd;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.sankey-download-btn:hover,
+.sankey-download-btn:focus {
+  background: #dbeafe;
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.15);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.sankey-export-widget {
+  width: 100%;
+}
+
 @media (max-width: 900px) {
   .share-dock {
     right: 10px;
@@ -122,5 +169,14 @@
   .share-icon {
     width: 20px;
     height: 20px;
+  }
+
+  .sankey-export-toolbar {
+    gap: 0.5rem;
+  }
+
+  .sankey-download-btn {
+    min-width: 78px;
+    padding: 0.5rem 0.75rem;
   }
 }
